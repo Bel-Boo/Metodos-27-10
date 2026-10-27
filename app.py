@@ -15,6 +15,54 @@ import streamlit as st
 st.set_page_config(page_title="Integración numérica · La Paz", page_icon="📐", layout="wide")
 
 # ----------------------------------------------------------------------------
+# ESTILO (colores, tipografía, divisiones)
+# ----------------------------------------------------------------------------
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+html, body, [class*="css"], .stMarkdown, button, input, textarea { font-family: 'Poppins', sans-serif !important; }
+
+/* Títulos con degradado */
+h1 { background: linear-gradient(90deg, #6a11cb, #2575fc); -webkit-background-clip: text;
+     -webkit-text-fill-color: transparent; font-weight: 700 !important; }
+h2, h3, h4, h5 { color: #4b3f9e; font-weight: 600 !important; }
+
+/* Barra lateral */
+[data-testid="stSidebar"] { background: linear-gradient(180deg, #1e1b4b 0%, #4338ca 55%, #2575fc 100%); }
+[data-testid="stSidebar"] * { color: #f1f5ff !important; }
+[data-testid="stSidebar"] hr { border-color: rgba(255,255,255,.25); }
+.marca { text-align:center; padding: 8px 0 4px; }
+.marca .logo { font-size: 46px; line-height: 1; }
+.marca .t { font-size: 20px; font-weight: 700; letter-spacing: .5px; }
+.marca .s { font-size: 12px; opacity: .8; }
+
+/* Menú tipo botones */
+[data-testid="stSidebar"] div[role="radiogroup"] { gap: 8px; }
+[data-testid="stSidebar"] div[role="radiogroup"] label {
+    background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.18);
+    border-radius: 12px; padding: 10px 14px; transition: all .2s; cursor: pointer; }
+[data-testid="stSidebar"] div[role="radiogroup"] label:hover {
+    background: rgba(255,255,255,.22); transform: translateX(4px); }
+[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
+    background: linear-gradient(90deg, #ff9a3c, #ff5e62); border-color: transparent;
+    box-shadow: 0 4px 14px rgba(255,94,98,.45); }
+[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child { display: none; }
+[data-testid="stSidebar"] div[role="radiogroup"] label p { font-weight: 500; font-size: 15px; }
+
+/* Tarjetas de métricas, pestañas y botones */
+[data-testid="stMetric"] { background: #f4f3ff; border-left: 5px solid #6a11cb; border-radius: 12px;
+    padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.stTabs [data-baseweb="tab-list"] { gap: 8px; }
+.stTabs [data-baseweb="tab"] { background: #eef2ff; border-radius: 10px 10px 0 0; padding: 8px 18px; }
+.stTabs [aria-selected="true"] { background: #4338ca !important; }
+.stTabs [aria-selected="true"] p { color: white !important; }
+.stButton button, .stDownloadButton button { border-radius: 10px; border: none; color: white;
+    background: linear-gradient(90deg, #6a11cb, #2575fc); font-weight: 600; }
+.block-container { padding-top: 2rem; }
+</style>
+""", unsafe_allow_html=True)
+
+# ----------------------------------------------------------------------------
 # 1) NÚCLEO NUMÉRICO
 # ----------------------------------------------------------------------------
 METODOS = ["Trapecio compuesto", "Simpson 1/3", "Simpson 3/8",
@@ -187,7 +235,7 @@ def mostrar(p):
             txt += f"  ·  {p['nota'](vals[m])}"
         st.success(txt)
     fig, ax = plt.subplots(figsize=(7, 3))
-    ax.plot(x, y, "o-", color="#1f77b4"); ax.fill_between(x, y, alpha=0.25)
+    ax.plot(x, y, "o-", color="#4338ca"); ax.fill_between(x, y, alpha=0.25, color="#6a11cb")
     ax.set_xlabel(p.get("xl", "x")); ax.set_ylabel(p.get("yl", "f(x)")); ax.grid(alpha=0.3)
     st.pyplot(fig); plt.close(fig)
     ok = [k for k in METODOS if res[k][0] is not None]
@@ -327,12 +375,17 @@ EJ = {
 
 
 def entradas(k, widget=True):
-    """Lee datos por teclado (widget=True) o toma los valores por defecto."""
+    """Lee datos por teclado (widget=True) o toma los valores del solucionario."""
     e = EJ[k]
     xy, p, n = None, {}, e.get("n", 0)
     if e["tipo"] == "tabla":
-        base = pd.DataFrame(e["df"], columns=e["cols"], dtype=float)
-        d = st.data_editor(base, num_rows="dynamic", key=f"de{k}") if widget else base
+        full = pd.DataFrame(e["df"], columns=e["cols"], dtype=float)
+        if widget:
+            usar = st.toggle("📥 Cargar datos de ejemplo del solucionario", value=False, key=f"ej{k}")
+            base = full if usar else pd.DataFrame({c: [None] * len(full) for c in e["cols"]}, dtype=float)
+            d = st.data_editor(base, num_rows="dynamic", key=f"de{k}_{int(usar)}", use_container_width=True)
+        else:
+            d = full
         d = d.dropna(how="all").apply(pd.to_numeric, errors="coerce")
         xy = (d.iloc[:, 0].to_numpy(float), d.iloc[:, 1].to_numpy(float))
     else:
@@ -353,35 +406,6 @@ def problemas(k, xy, p, n):
 # ----------------------------------------------------------------------------
 # 4) PÁGINAS
 # ----------------------------------------------------------------------------
-def pag_inicio():
-    st.title("📐 Integración numérica aplicada a La Paz")
-    st.caption("Desafío grupal de Métodos Numéricos · Trapecio compuesto, Simpson 1/3 y Simpson 3/8")
-    st.markdown("""
-**¿Qué hace esta página?** Calcula integrales a partir de datos que **tú escribes con el teclado** y te muestra
-el resultado, el error, una tabla y un gráfico. Es solo para verificar tus cálculos manuales.
-
-**Cómo usarla en 3 pasos**
-1. Elige una opción en el **menú de la izquierda**.
-2. Escribe tus datos (o usa los que ya vienen del solucionario).
-3. Mira la tabla de resultados: ¿cuánto salió con cada método y qué tan cerca está del valor exacto?
-""")
-    st.subheader("Los 3 métodos en palabras simples")
-    st.markdown("""
-Integrar = **calcular el área bajo una curva**. Dividimos el intervalo [a, b] en *n* tramos iguales de ancho
-**h = (b − a)/n** y sumamos áreas pequeñas.
-""")
-    st.dataframe(pd.DataFrame({
-        "Método": ["Trapecio compuesto", "Simpson 1/3", "Simpson 3/8"],
-        "Idea": ["Une los puntos con rectas", "Une de a 2 tramos con una parábola", "Une de a 3 tramos con una cúbica"],
-        "Condición sobre n": ["Cualquier n", "n par", "n múltiplo de 3"],
-        "Coeficientes": ["1, 2, 2, …, 2, 1", "1, 4, 2, 4, …, 4, 1", "1, 3, 3, 2, 3, 3, …, 3, 1"],
-        "Factor": ["h/2", "h/3", "3h/8"]}), hide_index=True)
-    st.latex(r"E_a=|I_{ref}-I_{aprox}| \qquad E\%=100\,\frac{E_a}{|I_{ref}|}")
-    st.info("Con n = 7 (como en los ejercicios 19 y 20) se combina Simpson 1/3 en 4 tramos + Simpson 3/8 en 3 tramos.")
-    st.subheader("Ejercicios incluidos")
-    st.dataframe(pd.DataFrame({"Ejercicio": list(EJ), "Tema": [v["t"] for v in EJ.values()]}), hide_index=True)
-
-
 def pag_calc():
     st.title("🧮 Calculadora libre")
     st.write("Escribe tus propios datos. Elige si tienes una **tabla (x, y)** o una **función f(x)**.")
@@ -424,11 +448,11 @@ def pag_ejercicios():
     with t1:
         st.subheader(e["t"]); st.markdown(e["que"]); st.latex(e["modelo"])
     with t2:
-        st.caption("✍️ Puedes cambiar los datos con el teclado: la tabla se recalcula sola.")
+        st.caption("✍️ Escribe tus datos con el teclado: la tabla se recalcula sola.")
         try:
             xy, p, n = entradas(k)
-            if e["tipo"] == "tabla" and (np.isnan(xy[0]).any() or np.isnan(xy[1]).any()):
-                st.info("Completa todas las celdas con números para calcular.")
+            if e["tipo"] == "tabla" and (len(xy[0]) < 3 or np.isnan(xy[0]).any() or np.isnan(xy[1]).any()):
+                st.info("✍️ Escribe al menos 3 filas con números (x creciente y paso igual) para calcular.")
             else:
                 for q in problemas(k, xy, p, n):
                     mostrar(q)
@@ -508,8 +532,23 @@ def pag_sistemas():
             "(n múltiplo de 3)*, y muestra cómo el error baja al aumentar n.")
 
 
-PAGS = {"🏠 Inicio": pag_inicio, "🧮 Calculadora": pag_calc, "📚 Ejercicios": pag_ejercicios,
-        "📄 Informe": pag_informe, "💻 Ing. de Sistemas": pag_sistemas}
-st.sidebar.title("Menú")
-PAGS[st.sidebar.radio("Ir a:", list(PAGS))]()
-st.sidebar.caption("Métodos Numéricos · La Paz, Bolivia")
+# ----------------------------------------------------------------------------
+# 5) MENÚ
+# ----------------------------------------------------------------------------
+PAGS = {"🧮  Calculadora": pag_calc, "📚  Ejercicios": pag_ejercicios,
+        "📄  Informe": pag_informe, "💻  Ing. de Sistemas": pag_sistemas}
+
+with st.sidebar:
+    st.markdown("""<div class="marca"><div class="logo">📐</div>
+        <div class="t">Integración Numérica</div><div class="s">La Paz · Bolivia</div></div>""",
+                unsafe_allow_html=True)
+    st.divider()
+    st.markdown("**📌 NAVEGACIÓN**")
+    pagina = st.radio("Ir a:", list(PAGS), label_visibility="collapsed")
+    st.divider()
+    st.markdown("**ℹ️ MÉTODOS**")
+    st.caption("▫️ Trapecio compuesto\n\n▫️ Simpson 1/3\n\n▫️ Simpson 3/8")
+    st.divider()
+    st.caption("Métodos Numéricos · 2026")
+
+PAGS[pagina]()
