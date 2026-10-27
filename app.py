@@ -380,12 +380,8 @@ def entradas(k, widget=True):
     xy, p, n = None, {}, e.get("n", 0)
     if e["tipo"] == "tabla":
         full = pd.DataFrame(e["df"], columns=e["cols"], dtype=float)
-        if widget:
-            usar = st.toggle("📥 Cargar datos de ejemplo del solucionario", value=False, key=f"ej{k}")
-            base = full if usar else pd.DataFrame({c: [None] * len(full) for c in e["cols"]}, dtype=float)
-            d = st.data_editor(base, num_rows="dynamic", key=f"de{k}_{int(usar)}", use_container_width=True)
-        else:
-            d = full
+        d = st.data_editor(full, num_rows="dynamic", key=f"de{k}", use_container_width=True) if widget else full
+
         d = d.dropna(how="all").apply(pd.to_numeric, errors="coerce")
         xy = (d.iloc[:, 0].to_numpy(float), d.iloc[:, 1].to_numpy(float))
     else:
@@ -527,9 +523,7 @@ def pag_sistemas():
 - **Eficiencia:** más subintervalos = más precisión pero más tiempo de cómputo (compromiso precisión vs costo).
 - **Manejo de errores:** validar datos (x creciente, paso uniforme, n compatible) evita resultados falsos, como en cualquier sistema.
 """)
-    st.subheader("Consejo para la defensa oral")
-    st.info("Explica cada método con una frase: *trapecio = rectas, Simpson 1/3 = parábolas (n par), Simpson 3/8 = cúbicas "
-            "(n múltiplo de 3)*, y muestra cómo el error baja al aumentar n.")
+    
 
 
 # ----------------------------------------------------------------------------
